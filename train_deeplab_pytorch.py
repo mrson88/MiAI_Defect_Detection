@@ -326,31 +326,6 @@ def inference(dl, model, device, n_ims = 15):
         # Third plot
         count = plot(cols, rows, count, im = pred, title = "Predicted Mask")
 
-model = torch.load("/home/mrson/python_code/hoc_deeplearning/MiAI_Defect_Detection/models/aerial_best_model.pt")
+model = torch.load("/home/mrson/python_code/hoc_deeplearning/MiAI_Defect_Detection/models/aerial_best_model.pt", weights_only=False)
 # model = torch.load('/home/mrson/python_code/hoc_deeplearning/MiAI_Defect_Detection/models/aerial_best_model.pt', map_location=torch.device('cuda'), weights_only=False)
-# inference(test_dl, model = model, device = device)
-dl=''
-n_ims = 15
-cols = n_ims // 3; rows = n_ims // cols
-
-count = 1
-ims, gts, preds = [], [], []
-for idx, data in enumerate(dl):
-    im, gt = data
-
-    # Get predicted mask
-    with torch.no_grad(): pred = torch.argmax(model(im.to(device)), dim = 1)
-    ims.append(im); gts.append(gt); preds.append(pred)
-    
-plt.figure(figsize = (35, 30))
-for idx, (im, gt, pred) in enumerate(zip(ims, gts, preds)):
-    if idx == cols: break
-    
-    # First plot
-    count = plot(cols, rows, count, im)
-
-    # Second plot
-    count = plot(cols, rows, count, im = gt, gt = True, title = "Ground Truth")
-
-    # Third plot
-    count = plot(cols, rows, count, im = pred, title = "Predicted Mask")
+inference(test_dl, model = model, device = device)
