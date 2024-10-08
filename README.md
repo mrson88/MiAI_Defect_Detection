@@ -13,3 +13,4 @@ Website: http://miai.vn<br>
 Youtube: http://bit.ly/miaiyoutube<br>
 
 python -m venv unet
+https://www.kaggle.com/datasets/humansintheloop/semantic-segmentation-of-aerial-imagery?resource=download

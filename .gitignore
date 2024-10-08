@@ -1,3 +1,6 @@
 /unet
 *.png
+*.jpg
 /NV_public_defects
+/models
+/Semantic_segmentation_dataset
