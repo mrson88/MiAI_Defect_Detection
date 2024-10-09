@@ -3,6 +3,11 @@ from PIL import Image; from matplotlib import pyplot as plt
 from glob import glob
 from torch.utils.data import random_split, Dataset, DataLoader
 from albumentations.pytorch import ToTensorV2
+import time
+from tqdm import tqdm
+from torch.nn import functional as F
+import random
+from torchvision import transforms as tfs
 
 class CustomSegmentationDataset(Dataset):
     
@@ -12,17 +17,13 @@ class CustomSegmentationDataset(Dataset):
         self.gt_paths = sorted(glob(f"{root}/*/masks/*.png"))
         self.transformations = transformations
         self.n_cls = 5
-        
         assert len(self.im_paths) == len(self.gt_paths)
         
     def __len__(self): return len(self.im_paths)
 
     def __getitem__(self, idx):
-        
         im, gt = self.get_im_gt(self.im_paths[idx], self.gt_paths[idx])
-        
         if self.transformations: im, gt = self.apply_transformations(im, gt)
-        
         return im, gt
         
     def get_im_gt(self, im_path, gt_path): return self.read_im(im_path), self.read_im(gt_path)
@@ -61,13 +62,11 @@ mean, std, im_h, im_w = [0.485, 0.456, 0.406], [0.229, 0.224, 0.225], 256, 256
 trans = A.Compose( [A.Resize(im_h, im_w), A.augmentations.transforms.Normalize(mean = mean, std = std), ToTensorV2(transpose_mask = True) ])
 tr_dl, val_dl, test_dl, n_cls = get_dls(root = root, transformations = trans, bs = 4)
 
-import random
-from torchvision import transforms as tfs
+
 
 def tn_2_np(t): 
     invTrans = tfs.Compose([ tfs.Normalize(mean = [ 0., 0., 0. ], std = [ 1/0.229, 1/0.224, 1/0.225 ]),
                                 tfs.Normalize(mean = [ -0.485, -0.456, -0.406 ], std = [ 1., 1., 1. ]) ])
-    
     rgb = True if len(t) == 3 else False
     
     return (invTrans(t) * 255).detach().cpu().permute(1,2,0).numpy().astype(np.uint8) if rgb else (t*255).detach().cpu().numpy().astype(np.uint8)
@@ -100,17 +99,13 @@ def visualize(ds, n_ims):
         
 visualize(tr_dl.dataset, n_ims = 20)
 
-
-# !pip install segmentation_models_pytorch
 import segmentation_models_pytorch as smp
 
 model = smp.DeepLabV3Plus(classes = n_cls)
 loss_fn = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(params = model.parameters(), lr = 3e-4)
 
-import time
-from tqdm import tqdm
-from torch.nn import functional as F
+
 
 class Metrics():
     
@@ -224,7 +219,6 @@ def train(model, tr_dl, val_dl, loss_fn, opt, device, epochs, save_prefix, save_
         val_iou_ /=  val_len
         val_pa_ /=   val_len
 
-        print("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
         print(f"\nEpoch {epoch} train process results: \n")
         print(f"Train Time         -> {tic_toc(tic):.3f} secs")
         print(f"Train Loss         -> {tr_loss_:.3f}")
@@ -258,7 +252,6 @@ def train(model, tr_dl, val_dl, loss_fn, opt, device, epochs, save_prefix, save_
             if not_improve == early_stop_threshold:
                 print(f"Stopping training process becuase loss value did not decrease for {early_stop_threshold} epochs!")
                 break
-        print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
             
     print(f"Train process is completed in {(tic_toc(train_start)) / 60:.3f} minutes.")
     
@@ -298,61 +291,3 @@ class Plot():
         self.decorate(ylabel, title)                
         
 Plot(history)
-
-
-
-
-# model = torch.load("/home/mrson/python_code/hoc_deeplearning/MiAI_Defect_Detection/models/aerial_best_model.pt", weights_only=False)
-
-
-# def load_image_for_prediction(image_path, transform):
-#     # Read the image
-#     image = cv2.imread(image_path)
-#     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    
-#     # Apply the same transformations as used in training
-#     transformed = transform(image=image)
-#     image_tensor = transformed["image"]
-    
-#     # Add batch dimension
-#     image_tensor = image_tensor.unsqueeze(0)
-    
-#     return image_tensor
-
-# # Define the transformation (same as used in training)
-# transform = A.Compose([
-#     A.Resize(256, 256),
-#     A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-#     ToTensorV2(transpose_mask=True)
-# ])
-
-# def predict_image(model, image_tensor, device):
-#     model.eval()
-#     with torch.no_grad():
-#         image_tensor = image_tensor.to(device)
-#         output = model(image_tensor)
-#         prediction = torch.argmax(output, dim=1)
-#     return prediction.squeeze().cpu().numpy()
-
-# # Load the model (assuming it's already loaded as in your code)
-# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-# model = model.to(device)
-
-# # Example usage
-# image_path = "/home/mrson/python_code/hoc_deeplearning/MiAI_Defect_Detection/Semantic_segmentation_dataset/Tile 1/images/image_part_001.jpg"
-# image_tensor = load_image_for_prediction(image_path, transform)
-# prediction = predict_image(model, image_tensor, device)
-
-# # Visualize the result
-# plt.figure(figsize=(10, 5))
-# plt.subplot(1, 2, 1)
-# plt.imshow(cv2.imread(image_path)[:, :, ::-1])  # Original image
-# plt.title("Original Image")
-# plt.axis('off')
-
-# plt.subplot(1, 2, 2)
-# plt.imshow(prediction, cmap='jet')  # You might want to use a different colormap
-# plt.title("Prediction")
-# plt.axis('off')
-
-# plt.show()
