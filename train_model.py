@@ -145,7 +145,7 @@ if __name__ == "__main__":
 
         history = model.fit(
             train_loader, 
-            validation_data=test_loader, 
+            validation_data=test_loader,batch_size=1, 
             epochs=50, 
             callbacks=[callback]
         )
